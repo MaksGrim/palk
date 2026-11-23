@@ -209,6 +209,7 @@
   }
   .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
   .stat .v { font-size: 17px; font-weight: 800; color: var(--navy); margin-top: 3px; }
+  .stat .sub-v { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 600; }
   .btn {
     padding: 8px 14px;
     border: none;
@@ -331,7 +332,7 @@
     <div class="grid-2">
       <div>
         <div class="field">
-          <label>Оклад (€ / мес)</label>
+          <label>Оклад (€ / мес) — гарантирован даже при недоработке</label>
           <input type="number" step="0.01" id="oklad" value="2430.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
         </div>
         <div class="field">
@@ -380,6 +381,7 @@
       <div class="stat">
         <div class="k">Отработано по сменам</div>
         <div class="v" id="statWork">0.00 ч</div>
+        <div class="sub-v" id="statNormDiff">До нормы: 0.00 ч</div>
       </div>
       <div class="stat">
         <div class="k">Ночные (22–06) / Сон</div>
@@ -392,6 +394,7 @@
       <div class="stat good">
         <div class="k">Начислено (брутто)</div>
         <div class="v" id="statGross">0.00 €</div>
+        <div class="sub-v" id="statGrossHint">Оклад + доплаты</div>
       </div>
       <div class="stat warn">
         <div class="k">Удержания (ПДН + страх.)</div>
@@ -981,7 +984,8 @@ function recalcAll() {
     ? "Официальные праздники Эстонии в месяце " + state.activeMonth + ": " + monthHolidays.join(", ")
     : "Официальных праздников Эстонии в месяце " + state.activeMonth + " нет.";
 
-  const baseRate = mData.oklad / (mData.personalNorm || 1);
+  const normHours = mData.personalNorm || 1;
+  const baseRate = mData.oklad / normHours;
   const tbody = document.getElementById("shiftsTbody");
   tbody.innerHTML = "";
 
@@ -1017,8 +1021,13 @@ function recalcAll() {
     });
   }
 
+  // Гарантированный оклад при недоработке; если отработано больше личной нормы — доплата за часы сверх нормы
+  const basePay = Math.max(mData.oklad, totWork * baseRate);
+  const overtimeH = Math.max(0, totWork - normHours);
+  const underworkH = Math.max(0, normHours - totWork);
+
   const gross =
-    totWork * baseRate +
+    basePay +
     totNight * baseRate * 0.25 +
     totSleep * 2.0 +
     totHol * baseRate +
@@ -1032,9 +1041,15 @@ function recalcAll() {
 
   document.getElementById("statRate").textContent = baseRate.toFixed(2) + " €/ч";
   document.getElementById("statWork").textContent = totWork.toFixed(2) + " ч";
+  document.getElementById("statNormDiff").textContent = underworkH > 0
+    ? `Недоработка: −${underworkH.toFixed(2)} ч (оклад сохранён)`
+    : (overtimeH > 0 ? `Сверх нормы: +${overtimeH.toFixed(2)} ч` : "Ровно по норме");
   document.getElementById("statNightSleep").textContent = `${totNight.toFixed(1)} / ${totSleep.toFixed(1)} ч`;
   document.getElementById("statHol").textContent = totHol.toFixed(2) + " ч";
   document.getElementById("statGross").textContent = gross.toFixed(2) + " €";
+  document.getElementById("statGrossHint").textContent = underworkH > 0
+    ? `Оклад ${mData.oklad.toFixed(0)} € + доплаты`
+    : `Оклад + переработка + доплаты`;
   document.getElementById("statDed").textContent = totalDed.toFixed(2) + " €";
   document.getElementById("statNet").textContent = netPay.toFixed(2) + " €";
 }
