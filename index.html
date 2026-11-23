@@ -1081,6 +1081,11 @@ function saveEditedShift() {
 function deleteShift(id) {
   const mData = state.months[state.activeMonth];
   if (!mData) return;
+  const shift = mData.shifts.find(s => s.id === id);
+  const info = shift
+    ? ` смену #${shift.trip || "—"} (${shift.route || "без направления"}, ${fmtDt(shift.startMs)})`
+    : " эту смену";
+  if (!confirm(`Удалить${info}?`)) return;
   mData.shifts = mData.shifts.filter(s => s.id !== id);
   persistState();
   recalcAll();
