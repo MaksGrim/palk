@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Пошаговый учёт смен и зарплаты по месяцам (Эстония)</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --navy: #1e2d3d;
+    --navy-2: #2c4359;
+    --navy-3: #334e68;
+    --teal: #0f766e;
+    --teal-dark: #0b5c56;
+    --teal-bg: #e3f5f1;
+    --amber-bg: #fff6df;
+    --border: #cbd5e1;
+    --border-strong: #94a3b8;
+    --text: #1e293b;
+    --muted: #526071;
+    --blue: #0b4f8a;
+
+    /* Объёмные многослойные тени */
+    --shadow-card:
+      0 1px 0 rgba(255, 255, 255, 0.9) inset,
+      0 8px 20px -6px rgba(15, 23, 42, 0.14),
+      0 2px 5px -1px rgba(15, 23, 42, 0.08);
+    --shadow-card-lift:
+      0 1px 0 rgba(255, 255, 255, 0.95) inset,
+      0 14px 28px -8px rgba(15, 23, 42, 0.18),
+      0 4px 10px -2px rgba(15, 23, 42, 0.1);
+    --shadow-btn-primary:
+      0 1px 0 rgba(255, 255, 255, 0.24) inset,
+      0 4px 0 #102030,
+      0 7px 14px rgba(15, 23, 42, 0.22);
+    --shadow-btn-teal:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 4px 0 #074742,
+      0 7px 14px rgba(15, 118, 110, 0.25);
+    --shadow-btn-outline:
+      0 1px 0 #ffffff inset,
+      0 3px 0 #b8c4d0,
+      0 5px 10px rgba(15, 23, 42, 0.1);
+    --shadow-btn-danger:
+      0 1px 0 rgba(255, 255, 255, 0.22) inset,
+      0 3px 0 #7f1d1d,
+      0 6px 12px rgba(185, 28, 28, 0.22);
+    --shadow-inset:
+      0 2px 5px rgba(15, 23, 42, 0.08) inset,
+      0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(36, 59, 83, 0.07), transparent 45%),
+      radial-gradient(circle at 85% 10%, rgba(15, 118, 110, 0.06), transparent 40%),
+      var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+  }
+
+  header {
+    background: linear-gradient(180deg, #273f58 0%, var(--navy) 100%);
+    color: #fff;
+    padding: 16px 22px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 2px solid #0d1722;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.14) inset,
+      0 8px 20px rgba(15, 23, 42, 0.25);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  }
+
+  header .sub {
+    font-size: 12px;
+    color: #cbd5e1;
+    margin-top: 3px;
+  }
+
+  .container {
+    max-width: 1160px;
+    margin: 20px auto;
+    padding: 0 14px 48px;
+  }
+
+  .card {
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-bottom-color: #b8c4d0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-card);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-lift);
+  }
+
+  .card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid #dde4ec;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 0;
+  }
+
+  .month-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: linear-gradient(180deg, #e7eef5 0%, #dce6f0 100%);
+    border: 1px solid #b8c6d4;
+    border-radius: 11px;
+    padding: 11px 14px;
+    box-shadow: var(--shadow-inset);
+  }
+
+  .month-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .m-tab {
+    padding: 7px 14px;
+    border-radius: 9px;
+    border: 1px solid #9fb0c2;
+    background: linear-gradient(180deg, #ffffff 0%, #edf2f7 100%);
+    color: var(--navy);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow:
+      0 1px 0 #ffffff inset,
+      0 3px 0 #b0becc,
+      0 4px 8px rgba(15, 23, 42, 0.1);
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease;
+  }
+
+  .m-tab:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 1px 0 #ffffff inset,
+      0 4px 0 #b0becc,
+      0 6px 12px rgba(15, 23, 42, 0.14);
+  }
+
+  .m-tab:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 2px 4px rgba(15, 23, 42, 0.15) inset,
+      0 1px 0 #b0becc;
+  }
+
+  .m-tab.active {
+    background: linear-gradient(180deg, #355475 0%, var(--navy-2) 100%);
+    color: #fff;
+    border-color: #162638;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.25) inset,
+      0 3px 0 #101e2d,
+      0 6px 12px rgba(15, 23, 42, 0.22);
+  }
+
+  .active-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid #b6c4d2;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--muted);
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08), 0 1px 0 #fff inset;
+  }
+
+  .lock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(180deg, #f8fafc 0%, #e6edf5 100%);
+    border: 1px solid #b0becb;
+    padding: 7px 13px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    color: var(--navy);
+    box-shadow:
+      0 1px 0 #ffffff inset,
+      0 3px 0 #b6c4d2,
+      0 5px 10px rgba(15, 23, 42, 0.1);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+  }
+
+  .lock-badge:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.12) inset;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .field label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+
+  input,
+  select {
+    padding: 9px 12px;
+    border: 1px solid #a8b7c7;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--blue);
+    background: #ffffff;
+    box-shadow: var(--shadow-inset);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--teal);
+    box-shadow:
+      0 2px 5px rgba(15, 23, 42, 0.08) inset,
+      0 0 0 3px rgba(15, 118, 110, 0.18);
+  }
+
+  input:disabled,
+  select:disabled {
+    background: linear-gradient(180deg, #e8eef4 0%, #dfe7ef 100%);
+    color: #475569;
+    border-color: #c2ceda;
+    cursor: not-allowed;
+  }
+
+  .readonly-box {
+    padding: 9px 12px;
+    background: linear-gradient(180deg, #f1f5f9 0%, #e5ecf3 100%);
+    border: 1px solid #b8c6d4;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+    box-shadow: var(--shadow-inset);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .stat {
+    background: linear-gradient(180deg, #ffffff 0%, #eef3f8 100%);
+    border: 1px solid #c2ceda;
+    border-bottom-width: 3px;
+    border-bottom-color: #9fb0c2;
+    border-radius: 11px;
+    padding: 12px 13px;
+    box-shadow:
+      0 1px 0 #ffffff inset,
+      0 6px 14px -4px rgba(15, 23, 42, 0.13);
+    transition: transform 0.15s ease;
+  }
+
+  .stat:hover {
+    transform: translateY(-2px);
+  }
+
+  .stat.good {
+    background: linear-gradient(180deg, #effaf7 0%, #d5f0ea 100%);
+    border-color: #8ce0d2;
+    border-bottom-color: #149186;
+  }
+
+  .stat.warn {
+    background: linear-gradient(180deg, #fffbeb 0%, #feefc7 100%);
+    border-color: #f3d284;
+    border-bottom-color: #d99b16;
+  }
+
+  .stat .k {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .stat .v {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .btn {
+    padding: 9px 15px;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, filter 0.15s ease;
+  }
+
+  .btn-primary {
+    background: linear-gradient(180deg, #365678 0%, var(--navy-2) 100%);
+    color: #fff;
+    border: 1px solid #162638;
+    box-shadow: var(--shadow-btn-primary);
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 2px 5px rgba(0, 0, 0, 0.35) inset,
+      0 1px 0 #102030;
+  }
+
+  .btn-teal {
+    background: linear-gradient(180deg, #14968c 0%, var(--teal) 100%);
+    color: #fff;
+    border: 1px solid #09524c;
+    box-shadow: var(--shadow-btn-teal);
+  }
+
+  .btn-teal:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+  }
+
+  .btn-teal:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 2px 5px rgba(0, 0, 0, 0.3) inset,
+      0 1px 0 #074742;
+  }
+
+  .btn-outline {
+    background: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+    color: var(--navy);
+    border: 1px solid #a6b5c5;
+    box-shadow: var(--shadow-btn-outline);
+  }
+
+  .btn-outline:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #e4ebf2 100%);
+    transform: translateY(-1px);
+  }
+
+  .btn-outline:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 2px 4px rgba(15, 23, 42, 0.12) inset,
+      0 1px 0 #b8c4d0;
+  }
+
+  .btn-danger {
+    background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+    color: #fff;
+    border: 1px solid #7f1d1d;
+    padding: 6px 10px;
+    font-size: 12px;
+    box-shadow: var(--shadow-btn-danger);
+  }
+
+  .btn-danger:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+  }
+
+  .btn-danger:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.3) inset,
+      0 1px 0 #7f1d1d;
+  }
+
+  .wizard-box {
+    background: linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+    border: 1px solid #b8c6d4;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow-inset);
+  }
+
+  .step-pill {
+    display: inline-block;
+    background: linear-gradient(180deg, #355475 0%, var(--navy-2) 100%);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+    border: 1px solid #162638;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.25) inset,
+      0 3px 6px rgba(15, 23, 42, 0.2);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  }
+
+  th,
+  td {
+    border: 1px solid #cbd5e1;
+    padding: 8px 10px;
+    text-align: left;
+  }
+
+  th {
+    background: linear-gradient(180deg, #2b4560 0%, var(--navy) 100%);
+    color: #fff;
+    font-weight: 700;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  }
+
+  tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+
+  tr:hover td {
+    background: #eef5fb;
+  }
+
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+  }
+
+  .actions-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    padding: 7px 11px;
+    background: #f1f5f9;
+    border-left: 3px solid var(--navy-2);
+    border-radius: 6px;
+  }
+
+  .msg-banner {
+    display: none;
+    margin-top: 12px;
+    padding: 10px 13px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  }
+
+  .msg-banner.info {
+    display: block;
+    background: linear-gradient(180deg, #ecf9f6 0%, #d4efe9 100%);
+    border-color: #82dcd0;
+    color: #0b5c56;
+  }
+
+  .msg-banner.error {
+    display: block;
+    background: linear-gradient(180deg, #fef2f2 0%, #fde2e2 100%);
+    border-color: #f8b4b4;
+    color: #991b1b;
+  }
+
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 999;
+  }
+
+  .modal {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    max-width: 640px;
+    width: 100%;
+    border-radius: 14px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    box-shadow:
+      0 1px 0 #ffffff inset,
+      0 20px 45px rgba(15, 23, 42, 0.35);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Пошаговый учёт смен и зарплаты по месяцам (Эстония)</h1>
+    <div class="sub">Несколько месяцев • Просмотр по месяцам • Автопраздники Эстонии • Короткие и длинные смены со сном</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- УПРАВЛЕНИЕ МЕСЯЦАМИ И ПРОСМОТР -->
+  <section class="card" aria-label="Выбор и добавление месяцев">
+    <div class="card-header">
+      <h2 class="card-title">Месяцы и просмотр</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="month" id="newMonthInput" value="2026-12" />
+        <button type="button" class="btn btn-teal" id="addMonthBtn">+ Добавить / открыть месяц</button>
+      </div>
+    </div>
+    <div class="month-bar">
+      <div class="month-tabs" id="monthTabs"></div>
+      <div class="active-pill">
+        Активный месяц: <strong id="activeMonthBadge" style="color:var(--navy);">2026-11</strong>
+      </div>
+    </div>
+  </section>
+
+  <!-- ВЕРХНИЙ БЛОК ПАРАМЕТРОВ И НАЛОГОВ -->
+  <section class="card" aria-label="Параметры расчёта и налоги">
+    <div class="card-header">
+      <h2 class="card-title">1. Параметры расчёта и налоги (Эстония, 2026)</h2>
+      <label class="lock-badge" title="Защита от случайного изменения верхних настроек">
+        <input type="checkbox" id="lockToggle" checked />
+        <span id="lockLabel">🔒 Верхний блок заблокирован</span>
+      </label>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="field">
+          <label for="oklad">Оклад (€ / мес)</label>
+          <input type="number" step="0.01" id="oklad" value="2430.00" class="top-param" disabled />
+        </div>
+        <div class="field">
+          <label>Эстонская норма часов в месяце (авто, Пн–Пт без праздников × 8 ч)</label>
+          <div class="readonly-box" id="eeMonthNormDisplay">168.00 ч</div>
+        </div>
+        <div class="field">
+          <label for="personalNorm">Личная норма часов (ч) — единственное поле нормы, которое можно менять вручную</label>
+          <input type="number" step="0.5" id="personalNorm" value="168.0" />
+        </div>
+      </div>
+
+      <div>
+        <div class="field">
+          <label for="tuHours">Часы тех. учёбы (Т/У, ч)</label>
+          <input type="number" step="0.5" id="tuHours" value="0" class="top-param" disabled />
+        </div>
+        <div class="field">
+          <label for="taxFree">Необлагаемый минимум (€ / мес)</label>
+          <input type="number" step="0.01" id="taxFree" value="700.00" class="top-param" disabled />
+        </div>
+        <div class="grid-2" style="gap:8px;">
+          <div class="field">
+            <label for="pitRate">Ставка ПДН (tulumaks)</label>
+            <input type="number" step="0.001" id="pitRate" value="0.22" class="top-param" disabled />
+          </div>
+          <div class="field">
+            <label for="uiRate">Страховка (töötuskindlustus)</label>
+            <input type="number" step="0.001" id="uiRate" value="0.016" class="top-param" disabled />
+          </div>
+        </div>
+        <div class="field">
+          <label for="extraDed">Доп. вычеты (€)</label>
+          <input type="number" step="0.01" id="extraDed" value="0.00" class="top-param" disabled />
+        </div>
+      </div>
+    </div>
+
+    <div class="hint" id="holidaysInfo"></div>
+
+    <div class="summary-grid">
+      <div class="stat">
+        <div class="k">Базовая ставка</div>
+        <div class="v" id="statRate">0.00 €/ч</div>
+      </div>
+      <div class="stat">
+        <div class="k">Отработано по сменам</div>
+        <div class="v" id="statWork">0.00 ч</div>
+      </div>
+      <div class="stat">
+        <div class="k">Ночные (22–06) / Сон</div>
+        <div class="v" id="statNightSleep">0.0 / 0.0 ч</div>
+      </div>
+      <div class="stat">
+        <div class="k">Праздничные (авто)</div>
+        <div class="v" id="statHol">0.00 ч</div>
+      </div>
+      <div class="stat good">
+        <div class="k">Начислено (брутто)</div>
+        <div class="v" id="statGross">0.00 €</div>
+      </div>
+      <div class="stat warn">
+        <div class="k">Удержания (ПДН + страх.)</div>
+        <div class="v" id="statDed">0.00 €</div>
+      </div>
+      <div class="stat good">
+        <div class="k">К выплате (нетто)</div>
+        <div class="v" id="statNet">0.00 €</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ПОШАГОВЫЙ МАСТЕР ДОБАВЛЕНИЯ СМЕНЫ -->
+  <section class="card" aria-label="Пошаговый ввод смены">
+    <div class="card-header">
+      <h2 class="card-title">2. Пошаговый ввод смены в месяц <span id="wizMonthLabel">2026-11</span></h2>
+      <div style="font-size:12px;color:var(--muted);">
+        Короткая смена = 1 интервал • Длинная смена со сном = 2 интервала (сон считается автоматически)
+      </div>
+    </div>
+
+    <div class="wizard-box">
+      <div class="step-pill" id="stepIndicator">Шаг 1 из 4 — Тип смены и направление</div>
+
+      <!-- Шаг 1 -->
+      <div id="stepPanel1">
+        <div class="grid-2">
+          <div class="field">
+            <label for="wizShiftKind">Вид смены</label>
+            <select id="wizShiftKind">
+              <option value="short">Короткая смена (один интервал)</option>
+              <option value="long">Длинная смена со сном (два интервала)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="wizTripNo">Номер поездки / смены</label>
+            <input type="text" id="wizTripNo" placeholder="Например: 1" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="wizRoute">Направление / станция / участок</label>
+          <input type="text" id="wizRoute" placeholder="Например: Muuga / Pärnu / Tapa" />
+        </div>
+        <div class="actions-bar">
+          <button type="button" class="btn btn-primary" id="toStep2Btn">Далее → Явка и конец (1-я часть)</button>
+        </div>
+      </div>
+
+      <!-- Шаг 2 -->
+      <div id="stepPanel2" style="display:none;">
+        <div class="grid-2">
+          <div class="field">
+            <label for="wizStart1">Явка (дата и время, YYYY-MM-DDTHH:MM)</label>
+            <input type="datetime-local" id="wizStart1" />
+          </div>
+          <div class="field">
+            <label for="wizEnd1">Конец (дата и время, YYYY-MM-DDTHH:MM)</label>
+            <input type="datetime-local" id="wizEnd1" />
+          </div>
+        </div>
+        <div class="actions-bar">
+          <button type="button" class="btn btn-outline" id="backToStep1Btn">← Назад</button>
+          <button type="button" class="btn btn-primary" id="afterPart1Btn">Далее →</button>
+        </div>
+      </div>
+
+      <!-- Шаг 3 (только для длинной смены со сном) -->
+      <div id="stepPanel3" style="display:none;">
+        <div class="hint" id="sleepPreviewText" style="margin-bottom:12px;font-weight:700;color:var(--teal);border-left-color:var(--teal);"></div>
+        <div class="grid-2">
+          <div class="field">
+            <label for="wizStart2">2-я часть: Явка после сна (YYYY-MM-DDTHH:MM)</label>
+            <input type="datetime-local" id="wizStart2" />
+          </div>
+          <div class="field">
+            <label for="wizEnd2">2-я часть: Конец смены (YYYY-MM-DDTHH:MM)</label>
+            <input type="datetime-local" id="wizEnd2" />
+          </div>
+        </div>
+        <div class="actions-bar">
+          <button type="button" class="btn btn-outline" id="backToStep2Btn">← Назад</button>
+          <button type="button" class="btn btn-primary" id="toStep4FromLongBtn">Далее → Примечание и сохранение</button>
+        </div>
+      </div>
+
+      <!-- Шаг 4 -->
+      <div id="stepPanel4" style="display:none;">
+        <div class="field">
+          <label for="wizNote">Примечание (необязательно)</label>
+          <input type="text" id="wizNote" placeholder="Например: маневровые / резерв" />
+        </div>
+        <div class="actions-bar">
+          <button type="button" class="btn btn-outline" id="backFromStep4Btn">← Назад</button>
+          <button type="button" class="btn btn-teal" id="saveShiftBtn">✓ Добавить смену в выбранный месяц</button>
+        </div>
+      </div>
+
+      <div id="msgBanner" class="msg-banner" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ТАБЛИЦА СМЕН ПО ВЫБРАННОМУ МЕСЯЦУ -->
+  <section class="card" aria-label="Таблица смен за выбранный месяц">
+    <div class="card-header">
+      <h2 class="card-title">3. Просмотр смен за месяц: <span id="tableMonthLabel">2026-11</span></h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" id="exportCsvBtn">Скачать CSV месяца (для Calc / Excel)</button>
+        <button type="button" class="btn btn-danger" id="clearMonthBtn">Очистить месяц</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Поездка</th>
+            <th>Тип</th>
+            <th>Направление</th>
+            <th>Явка</th>
+            <th>Конец</th>
+            <th class="num">Раб. ч</th>
+            <th class="num">Ночные ч</th>
+            <th class="num">Сон ч</th>
+            <th class="num">Праздн. ч</th>
+            <th>Примечание</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="shiftsTbody">
+          <tr>
+            <td colspan="12" style="text-align:center;color:var(--muted);padding:16px;">
+              За этот месяц смен пока нет.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ИНСТРУКЦИИ -->
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal">
+    <h3 style="margin-top:0;color:var(--navy);">Публикация в браузере и на телефон (GitHub Pages)</h3>
+    <ol style="padding-left:18px;font-size:14px;color:var(--text);">
+      <li>Сохраните этот файл под именем <code>index.html</code>.</li>
+      <li>Загрузите <code>index.html</code> в репозиторий на GitHub и включите <b>Settings → Pages</b> (ветка <code>main</code>, папка <code>/ (root)</code>).</li>
+      <li>Откройте ссылку в Chrome на телефоне и нажмите <b>«Добавить на главный экран»</b>.</li>
+    </ol>
+    <p style="font-size:13px;color:var(--muted);">
+      Данные по каждому месяцу сохраняются локально в памяти браузера (<code>localStorage</code>): закрыли один месяц, открыли следующий и в любой момент можете переключиться между месяцами для просмотра.
+    </p>
+    <button type="button" class="btn btn-primary" id="closeHelpBtn">Закрыть</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "tunnid_master_months_v3";
+let currentWizardKind = "short";
+let bannerTimer = null;
+
+function showMessage(text, kind = "info") {
+  const banner = document.getElementById("msgBanner");
+  if (!banner) return;
+  banner.textContent = text;
+  banner.className = `msg-banner ${kind}`;
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => {
+    banner.className = "msg-banner";
+    banner.textContent = "";
+  }, 4500);
+}
+
+// Вычисление даты Пасхи по григорианскому календарю
+function getEasterDate(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day);
+}
+
+function addDays(dateObj, days) {
+  return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate() + days);
+}
+
+function toDateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Официальные праздники Эстонии (включая плавающие Suur reede и Nelipühade 1. püha)
+function getEstonianHolidays(year) {
+  const easter = getEasterDate(year);
+  const goodFriday = addDays(easter, -2);
+  const pentecost = addDays(easter, 49);
+
+  const list = [
+    { date: new Date(year, 0, 1), name: "Uus aasta" },
+    { date: new Date(year, 1, 24), name: "Iseseisvuspäev" },
+    { date: goodFriday, name: "Suur reede" },
+    { date: new Date(year, 4, 1), name: "Kevadpüha" },
+    { date: pentecost, name: "Nelipühade 1. püha" },
+    { date: new Date(year, 5, 23), name: "Võidupüha" },
+    { date: new Date(year, 5, 24), name: "Jaanipäev" },
+    { date: new Date(year, 7, 20), name: "Taasiseseisvumispäev" },
+    { date: new Date(year, 11, 24), name: "Jõululaupäev" },
+    { date: new Date(year, 11, 25), name: "Esimene jõulupüha" },
+    { date: new Date(year, 11, 26), name: "Teine jõulupüha" }
+  ];
+
+  const map = new Map();
+  list.forEach((item) => map.set(toDateKey(item.date), item.name));
+  return map;
+}
+
+// Эстонская норма часов в месяц: рабочие дни Пн-Пт за вычетом праздников * 8 ч
+function calcEstonianMonthNorm(year, monthIndex0) {
+  const holidays = getEstonianHolidays(year);
+  const daysInMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+  let workdays = 0;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dt = new Date(year, monthIndex0, day);
+    const dow = dt.getDay();
+    if (dow >= 1 && dow <= 5 && !holidays.has(toDateKey(dt))) {
+      workdays++;
+    }
+  }
+  return workdays * 8;
+}
+
+// Ночные часы в интервале [startMs, endMs]: окно 22:00 - 06:00
+function calcNightHours(startMs, endMs) {
+  if (!startMs || !endMs || endMs <= startMs) return 0;
+  let totalMs = 0;
+  const dStart = new Date(startMs);
+  const dEnd = new Date(endMs);
+  let curDay = new Date(dStart.getFullYear(), dStart.getMonth(), dStart.getDate() - 1);
+  const lastDay = new Date(dEnd.getFullYear(), dEnd.getMonth(), dEnd.getDate() + 1);
+
+  while (curDay <= lastDay) {
+    const nightStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 22, 0, 0).getTime();
+    const nightEnd = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate() + 1, 6, 0, 0).getTime();
+    const ovStart = Math.max(startMs, nightStart);
+    const ovEnd = Math.min(endMs, nightEnd);
+    if (ovEnd > ovStart) {
+      totalMs += (ovEnd - ovStart);
+    }
+    curDay = addDays(curDay, 1);
+  }
+  return totalMs / 3600000;
+}
+
+// Праздничные часы по календарным суткам официальных праздников Эстонии
+function calcHolidayHours(startMs, endMs, holidaysMap) {
+  if (!startMs || !endMs || endMs <= startMs) return 0;
+  let totalMs = 0;
+  const dStart = new Date(startMs);
+  const dEnd = new Date(endMs);
+  let curDay = new Date(dStart.getFullYear(), dStart.getMonth(), dStart.getDate() - 1);
+  const lastDay = new Date(dEnd.getFullYear(), dEnd.getMonth(), dEnd.getDate() + 1);
+
+  while (curDay <= lastDay) {
+    if (holidaysMap.has(toDateKey(curDay))) {
+      const hStart = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate(), 0, 0, 0).getTime();
+      const hEnd = new Date(curDay.getFullYear(), curDay.getMonth(), curDay.getDate() + 1, 0, 0, 0).getTime();
+      const ovStart = Math.max(startMs, hStart);
+      const ovEnd = Math.min(endMs, hEnd);
+      if (ovEnd > ovStart) {
+        totalMs += (ovEnd - ovStart);
+      }
+    }
+    curDay = addDays(curDay, 1);
+  }
+  return totalMs / 3600000;
+}
+
+function makeDefaultMonthData(ymStr) {
+  const [yS, mS] = ymStr.split("-");
+  const y = parseInt(yS, 10) || 2026;
+  const m0 = (parseInt(mS, 10) || 11) - 1;
+  const eeNorm = calcEstonianMonthNorm(y, m0);
+
+  return {
+    oklad: 2430.00,
+    personalNorm: eeNorm,
+    tuHours: 0,
+    taxFree: 700.00,
+    pitRate: 0.22,
+    uiRate: 0.016,
+    extraDed: 0.00,
+    shifts: []
+  };
+}
+
+let state = {
+  activeMonth: "2026-11",
+  months: {
+    "2026-11": makeDefaultMonthData("2026-11")
+  }
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.months && Object.keys(parsed.months).length) {
+        state = parsed;
+        if (!state.activeMonth || !state.months[state.activeMonth]) {
+          state.activeMonth = Object.keys(state.months).sort()[0];
+        }
+      }
+    }
+  } catch (e) {
+    showMessage("Не удалось прочитать сохранённые месяцы.", "error");
+  }
+}
+
+function persistState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    showMessage("Ошибка сохранения данных в браузере.", "error");
+  }
+}
+
+function addOrSwitchMonth() {
+  const ym = document.getElementById("newMonthInput").value;
+  if (!ym) {
+    showMessage("Выберите месяц в формате ГГГГ-ММ.", "error");
+    return;
+  }
+  const existed = Boolean(state.months[ym]);
+  if (!existed) {
+    state.months[ym] = makeDefaultMonthData(ym);
+  }
+  state.activeMonth = ym;
+  persistState();
+  loadMonthToInputs();
+  renderMonthTabs();
+  recalcAll();
+  showMessage(existed ? `Открыт месяц ${ym}.` : `Добавлен и открыт новый месяц ${ym}.`, "info");
+}
+
+function switchMonth(ym) {
+  if (!state.months[ym]) return;
+  state.activeMonth = ym;
+  persistState();
+  loadMonthToInputs();
+  renderMonthTabs();
+  recalcAll();
+}
+
+function renderMonthTabs() {
+  const container = document.getElementById("monthTabs");
+  container.innerHTML = "";
+  const sortedKeys = Object.keys(state.months).sort();
+
+  sortedKeys.forEach((ym) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "m-tab" + (ym === state.activeMonth ? " active" : "");
+    btn.textContent = ym;
+    btn.addEventListener("click", () => switchMonth(ym));
+    container.appendChild(btn);
+  });
+
+  document.getElementById("activeMonthBadge").textContent = state.activeMonth;
+  document.getElementById("wizMonthLabel").textContent = state.activeMonth;
+  document.getElementById("tableMonthLabel").textContent = state.activeMonth;
+}
+
+function loadMonthToInputs() {
+  const mData = state.months[state.activeMonth] || makeDefaultMonthData(state.activeMonth);
+  document.getElementById("oklad").value = mData.oklad;
+  document.getElementById("personalNorm").value = mData.personalNorm;
+  document.getElementById("tuHours").value = mData.tuHours;
+  document.getElementById("taxFree").value = mData.taxFree;
+  document.getElementById("pitRate").value = mData.pitRate;
+  document.getElementById("uiRate").value = mData.uiRate;
+  document.getElementById("extraDed").value = mData.extraDed;
+}
+
+function saveMonthParamsAndRecalc() {
+  const mData = state.months[state.activeMonth];
+  if (!mData) return;
+
+  mData.oklad = parseFloat(document.getElementById("oklad").value) || 0;
+  mData.personalNorm = parseFloat(document.getElementById("personalNorm").value) || 1;
+  mData.tuHours = parseFloat(document.getElementById("tuHours").value) || 0;
+  mData.taxFree = parseFloat(document.getElementById("taxFree").value) || 0;
+  mData.pitRate = parseFloat(document.getElementById("pitRate").value) || 0;
+  mData.uiRate = parseFloat(document.getElementById("uiRate").value) || 0;
+  mData.extraDed = parseFloat(document.getElementById("extraDed").value) || 0;
+
+  persistState();
+  recalcAll();
+}
+
+function toggleLock() {
+  const locked = document.getElementById("lockToggle").checked;
+  document.querySelectorAll(".top-param").forEach((el) => {
+    el.disabled = locked;
+  });
+  document.getElementById("lockLabel").textContent = locked
+    ? "🔒 Верхний блок заблокирован"
+    : "🔓 Верхний блок разблокирован";
+}
+
+function goStep(stepNum) {
+  currentWizardKind = document.getElementById("wizShiftKind").value;
+  document.getElementById("stepPanel1").style.display = stepNum === 1 ? "block" : "none";
+  document.getElementById("stepPanel2").style.display = stepNum === 2 ? "block" : "none";
+  document.getElementById("stepPanel3").style.display = stepNum === 3 ? "block" : "none";
+  document.getElementById("stepPanel4").style.display = stepNum === 4 ? "block" : "none";
+
+  const labels = {
+    1: "Шаг 1 из 4 — Тип смены и направление",
+    2: "Шаг 2 из 4 — Явка и конец смены (1-я часть)",
+    3: "Шаг 3 из 4 — 2-я часть длинной смены (после сна)",
+    4: "Шаг 4 из 4 — Примечание и добавление в месяц"
+  };
+  document.getElementById("stepIndicator").textContent = labels[stepNum] || "";
+}
+
+function handleAfterPart1() {
+  const s1 = document.getElementById("wizStart1").value;
+  const e1 = document.getElementById("wizEnd1").value;
+
+  if (!s1 || !e1) {
+    showMessage("Укажите дату и время явки и конца смены.", "error");
+    return;
+  }
+
+  const tStart = new Date(s1).getTime();
+  const tEnd = new Date(e1).getTime();
+
+  if (Number.isNaN(tStart) || Number.isNaN(tEnd) || tEnd <= tStart) {
+    showMessage("Время конца должно быть позже времени явки.", "error");
+    return;
+  }
+
+  currentWizardKind = document.getElementById("wizShiftKind").value;
+  if (currentWizardKind === "long") {
+    document.getElementById("sleepPreviewText").textContent =
+      "1-я часть завершена: " + e1.replace("T", " ") + ". Введите явку и конец 2-й части — время сна посчитается автоматически.";
+    goStep(3);
+  } else {
+    goStep(4);
+  }
+}
+
+function backFromStep4() {
+  goStep(currentWizardKind === "long" ? 3 : 2);
+}
+
+function saveShiftFromWizard() {
+  const mData = state.months[state.activeMonth];
+  if (!mData) return;
+
+  const tripNo = document.getElementById("wizTripNo").value.trim();
+  const route = document.getElementById("wizRoute").value.trim();
+  const s1 = document.getElementById("wizStart1").value;
+  const e1 = document.getElementById("wizEnd1").value;
+  const note = document.getElementById("wizNote").value.trim();
+
+  const start1Ms = new Date(s1).getTime();
+  const end1Ms = new Date(e1).getTime();
+
+  if (Number.isNaN(start1Ms) || Number.isNaN(end1Ms) || end1Ms <= start1Ms) {
+    showMessage("Проверьте дату и время 1-й части смены.", "error");
+    return;
+  }
+
+  const work1H = (end1Ms - start1Ms) / 3600000;
+
+  if (currentWizardKind === "short") {
+    mData.shifts.push({
+      id: Date.now() + Math.random(),
+      trip: tripNo,
+      kindLabel: "Короткая",
+      route,
+      startMs: start1Ms,
+      endMs: end1Ms,
+      workH: work1H,
+      sleepH: 0,
+      note
+    });
+  } else {
+    const s2 = document.getElementById("wizStart2").value;
+    const e2 = document.getElementById("wizEnd2").value;
+
+    if (!s2 || !e2) {
+      showMessage("Для длинной смены со сном укажите явку и конец 2-й части.", "error");
+      return;
+    }
+
+    const start2Ms = new Date(s2).getTime();
+    const end2Ms = new Date(e2).getTime();
+
+    if (Number.isNaN(start2Ms) || Number.isNaN(end2Ms) || end2Ms <= start2Ms || start2Ms < end1Ms) {
+      showMessage("Проверьте время 2-й части: явка после сна должна быть не раньше конца 1-й части, а конец — позже явки.", "error");
+      return;
+    }
+
+    const sleepH = (start2Ms - end1Ms) / 3600000;
+    const work2H = (end2Ms - start2Ms) / 3600000;
+
+    mData.shifts.push({
+      id: Date.now() + Math.random(),
+      trip: tripNo,
+      kindLabel: "Длинная (1-я часть)",
+      route,
+      startMs: start1Ms,
+      endMs: end1Ms,
+      workH: work1H,
+      sleepH: 0,
+      note
+    });
+
+    mData.shifts.push({
+      id: Date.now() + Math.random() + 1,
+      trip: tripNo,
+      kindLabel: "Длинная (2-я часть со сном)",
+      route,
+      startMs: start2Ms,
+      endMs: end2Ms,
+      workH: work2H,
+      sleepH,
+      note: note ? note + " (после сна)" : `После сна (${sleepH.toFixed(2)} ч)`
+    });
+  }
+
+  document.getElementById("wizStart1").value = "";
+  document.getElementById("wizEnd1").value = "";
+  document.getElementById("wizStart2").value = "";
+  document.getElementById("wizEnd2").value = "";
+  document.getElementById("wizNote").value = "";
+  goStep(1);
+  persistState();
+  recalcAll();
+  showMessage(`Смена добавлена в месяц ${state.activeMonth}.`, "info");
+}
+
+function deleteShift(id) {
+  const mData = state.months[state.activeMonth];
+  if (!mData) return;
+  mData.shifts = mData.shifts.filter((s) => s.id !== id);
+  persistState();
+  recalcAll();
+  showMessage("Строка смены удалена.", "info");
+}
+
+function clearCurrentMonthShifts() {
+  const mData = state.months[state.activeMonth];
+  if (!mData || !mData.shifts.length) {
+    showMessage(`В месяце ${state.activeMonth} нет смен для очистки.`, "info");
+    return;
+  }
+  mData.shifts = [];
+  persistState();
+  recalcAll();
+  showMessage(`Все смены за ${state.activeMonth} очищены.`, "info");
+}
+
+function fmtDt(ms) {
+  const d = new Date(ms);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}.${mm}.${yyyy} ${hh}:${min}`;
+}
+
+function recalcAll() {
+  const mData = state.months[state.activeMonth] || makeDefaultMonthData(state.activeMonth);
+  const [yStr, mStr] = state.activeMonth.split("-");
+  const year = parseInt(yStr, 10) || 2026;
+  const monthIdx0 = (parseInt(mStr, 10) || 11) - 1;
+
+  const eeNorm = calcEstonianMonthNorm(year, monthIdx0);
+  document.getElementById("eeMonthNormDisplay").textContent = eeNorm.toFixed(2) + " ч";
+
+  const holidaysMap = getEstonianHolidays(year);
+  const monthHolidays = [];
+  holidaysMap.forEach((hName, keyStr) => {
+    if (keyStr.startsWith(`${year}-${String(monthIdx0 + 1).padStart(2, "0")}-`)) {
+      monthHolidays.push(`${keyStr} (${hName})`);
+    }
+  });
+
+  document.getElementById("holidaysInfo").textContent = monthHolidays.length
+    ? "Официальные праздники Эстонии в месяце " + state.activeMonth + ": " + monthHolidays.join(", ")
+    : "Официальных праздников Эстонии в месяце " + state.activeMonth + " нет.";
+
+  const baseRate = mData.oklad / (mData.personalNorm || 1);
+  const tbody = document.getElementById("shiftsTbody");
+  tbody.innerHTML = "";
+
+  let totWork = 0;
+  let totNight = 0;
+  let totSleep = 0;
+  let totHol = 0;
+
+  if (!mData.shifts.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:16px;">За выбранный месяц смен пока нет.</td></tr>';
+  } else {
+    mData.shifts.forEach((s, idx) => {
+      const nightH = calcNightHours(s.startMs, s.endMs);
+      const holH = calcHolidayHours(s.startMs, s.endMs, holidaysMap);
+      totWork += s.workH;
+      totNight += nightH;
+      totSleep += s.sleepH;
+      totHol += holH;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${s.trip || "—"}</td>
+        <td>${s.kindLabel}</td>
+        <td>${s.route || "—"}</td>
+        <td>${fmtDt(s.startMs)}</td>
+        <td>${fmtDt(s.endMs)}</td>
+        <td class="num">${s.workH.toFixed(2)}</td>
+        <td class="num">${nightH.toFixed(2)}</td>
+        <td class="num">${s.sleepH.toFixed(2)}</td>
+        <td class="num">${holH.toFixed(2)}</td>
+        <td>${s.note || ""}</td>
+        <td><button type="button" class="btn btn-danger" data-del-id="${s.id}">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll("[data-del-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        deleteShift(Number(btn.dataset.delId));
+      });
+    });
+  }
+
+  const gross =
+    totWork * baseRate +
+    totNight * baseRate * 0.25 +
+    totSleep * 2.0 +
+    totHol * baseRate +
+    mData.tuHours * baseRate;
+
+  const uiDed = gross * mData.uiRate;
+  const taxable = Math.max(0, gross - uiDed - mData.taxFree - mData.extraDed);
+  const pitDed = taxable * mData.pitRate;
+  const totalDed = uiDed + pitDed + mData.extraDed;
+  const netPay = gross - totalDed;
+
+  document.getElementById("statRate").textContent = baseRate.toFixed(2) + " €/ч";
+  document.getElementById("statWork").textContent = totWork.toFixed(2) + " ч";
+  document.getElementById("statNightSleep").textContent = `${totNight.toFixed(1)} / ${totSleep.toFixed(1)} ч`;
+  document.getElementById("statHol").textContent = totHol.toFixed(2) + " ч";
+  document.getElementById("statGross").textContent = gross.toFixed(2) + " €";
+  document.getElementById("statDed").textContent = totalDed.toFixed(2) + " €";
+  document.getElementById("statNet").textContent = netPay.toFixed(2) + " €";
+}
+
+function exportCSV() {
+  const mData = state.months[state.activeMonth] || makeDefaultMonthData(state.activeMonth);
+  const [yStr] = state.activeMonth.split("-");
+  const holidaysMap = getEstonianHolidays(parseInt(yStr, 10) || 2026);
+
+  const rows = [
+    ["#", "Поездка", "Тип", "Направление", "Явка", "Конец", "Раб_ч", "Ночные_ч", "Сон_ч", "Праздн_ч", "Примечание"]
+  ];
+
+  mData.shifts.forEach((s, idx) => {
+    const nightH = calcNightHours(s.startMs, s.endMs);
+    const holH = calcHolidayHours(s.startMs, s.endMs, holidaysMap);
+    rows.push([
+      idx + 1,
+      s.trip || "",
+      s.kindLabel,
+      s.route || "",
+      fmtDt(s.startMs),
+      fmtDt(s.endMs),
+      s.workH.toFixed(2),
+      nightH.toFixed(2),
+      s.sleepH.toFixed(2),
+      holH.toFixed(2),
+      s.note || ""
+    ]);
+  });
+
+  const csvContent = "\uFEFF" + rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `рабочие_часы_${state.activeMonth}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showMessage(`Выгружен CSV за ${state.activeMonth}.`, "info");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadState();
+  loadMonthToInputs();
+  renderMonthTabs();
+  toggleLock();
+  recalcAll();
+
+  document.getElementById("addMonthBtn").addEventListener("click", addOrSwitchMonth);
+  document.getElementById("lockToggle").addEventListener("change", toggleLock);
+
+  ["oklad", "personalNorm", "tuHours", "taxFree", "pitRate", "uiRate", "extraDed"].forEach((id) => {
+    document.getElementById(id).addEventListener("change", saveMonthParamsAndRecalc);
+  });
+
+  document.getElementById("toStep2Btn").addEventListener("click", () => goStep(2));
+  document.getElementById("backToStep1Btn").addEventListener("click", () => goStep(1));
+  document.getElementById("afterPart1Btn").addEventListener("click", handleAfterPart1);
+  document.getElementById("backToStep2Btn").addEventListener("click", () => goStep(2));
+  document.getElementById("toStep4FromLongBtn").addEventListener("click", () => goStep(4));
+  document.getElementById("backFromStep4Btn").addEventListener("click", backFromStep4);
+  document.getElementById("saveShiftBtn").addEventListener("click", saveShiftFromWizard);
+
+  document.getElementById("exportCsvBtn").addEventListener("click", exportCSV);
+  document.getElementById("clearMonthBtn").addEventListener("click", clearCurrentMonthShifts);
+});
+</script>
+</body>
+</html>
