@@ -455,6 +455,11 @@
         <div class="v" id="statWork">0.00 ч</div>
         <div class="sub-v" id="statNormDiff">До нормы: 0.00 ч</div>
       </div>
+      <div class="stat" id="statOvertimeCard">
+        <div class="k">Переработка</div>
+        <div class="v" id="statOvertime">0.00 ч</div>
+        <div class="sub-v" id="statOvertimePay">Доплата: 0.00 €</div>
+      </div>
       <div class="stat">
         <div class="k">Ночные (22–06) / Сон</div>
         <div class="v" id="statNightSleep">0.0 / 0.0 ч</div>
@@ -1245,11 +1250,22 @@ function recalcAll() {
   const totalDed = uiDed + pitDed + mData.extraDed;
   const netPay = gross - totalDed;
 
+  const overtimePay = overtimeH * baseRate;
   document.getElementById("statRate").textContent = baseRate.toFixed(2) + " €/ч";
   document.getElementById("statWork").textContent = totWork.toFixed(2) + " ч";
   document.getElementById("statNormDiff").textContent = underworkH > 0
     ? `Недоработка: −${underworkH.toFixed(2)} ч (оклад сохранён)`
     : (overtimeH > 0 ? `Сверх нормы: +${overtimeH.toFixed(2)} ч` : "Ровно по норме");
+  document.getElementById("statOvertime").textContent = overtimeH > 0
+    ? `+${overtimeH.toFixed(2)} ч`
+    : "0.00 ч";
+  document.getElementById("statOvertimePay").textContent = overtimeH > 0
+    ? `Сверх оклада: +${overtimePay.toFixed(2)} €`
+    : "Сверх оклада: 0.00 €";
+  const otCard = document.getElementById("statOvertimeCard");
+  if (otCard) {
+    otCard.className = overtimeH > 0 ? "stat good" : "stat";
+  }
   document.getElementById("statNightSleep").textContent = `${totNight.toFixed(1)} / ${totSleep.toFixed(1)} ч`;
   document.getElementById("statHol").textContent = totHol.toFixed(2) + " ч";
   document.getElementById("statGross").textContent = gross.toFixed(2) + " €";
