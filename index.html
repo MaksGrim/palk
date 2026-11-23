@@ -357,6 +357,86 @@
     box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
     border: 1px solid #cbd5e1;
   }
+  .payslip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .payslip-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 11px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  }
+  .payslip-box-title {
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(180deg, #2c4359 0%, #1e2d3d 100%);
+  }
+  .payslip-box-title.earn {
+    background: linear-gradient(180deg, #14968b 0%, #0f766e 100%);
+  }
+  .payslip-box-title.ded {
+    background: linear-gradient(180deg, #b45309 0%, #92400e 100%);
+  }
+  .payslip-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .payslip-table td {
+    border: none;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 11px;
+    background: #fff !important;
+  }
+  .payslip-table tr:last-child td {
+    border-bottom: none;
+  }
+  .payslip-table tr.ps-total td {
+    background: #f1f5f9 !important;
+    font-weight: 800;
+    color: var(--navy);
+    border-top: 2px solid #94a3b8;
+  }
+  .payslip-net-banner {
+    margin-top: 14px;
+    padding: 13px 16px;
+    border-radius: 11px;
+    background: linear-gradient(180deg, #effcf9 0%, #dcf5ef 100%);
+    border: 1px solid #7dd3c7;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .payslip-net-banner .lbl {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .payslip-net-banner .formula {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .payslip-net-banner .val {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f766e;
+    font-variant-numeric: tabular-nums;
+  }
+  @media print {
+    header, .card:not(#payslipCard), .modal-backdrop { display: none !important; }
+    body { background: #fff; }
+    .container { max-width: 100%; margin: 0; padding: 0; }
+    #payslipCard { box-shadow: none; border: 1px solid #999; }
+    #payslipCard .no-print { display: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -408,7 +488,7 @@
           <input type="number" step="0.01" id="oklad" value="2430.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
         </div>
         <div class="field">
-          <label>Эстонская норма часов в месяце (авто, Пн–Пт без праздников × 8ч)</label>
+          <label>Эстонская норма часов в месяце (авто, TLS § 53 с предпраздн. −3ч)</label>
           <div class="readonly-box" id="eeMonthNormDisplay">168.00 ч</div>
         </div>
         <div class="field">
@@ -418,9 +498,15 @@
       </div>
 
       <div>
-        <div class="field">
-          <label>Часы тех. учёбы (Т/У, ч)</label>
-          <input type="number" step="0.5" id="tuHours" value="0" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
+        <div class="grid-2" style="gap:8px;">
+          <div class="field">
+            <label>Часы тех. учёбы (Т/У, ч)</label>
+            <input type="number" step="0.5" id="tuHours" value="0" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
+          </div>
+          <div class="field">
+            <label>Коэфф. переработки (TLS § 44)</label>
+            <input type="number" step="0.05" min="1" id="otRate" value="1.5" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
+          </div>
         </div>
         <div class="field">
           <label>Необлагаемый минимум (€ / мес)</label>
@@ -596,6 +682,42 @@
     </div>
   </div>
 
+  <!-- 4. РАСЧЁТНЫЙ ЛИСТ (ОБЩИЙ ХОД ИСЧИСЛЕНИЯ ВЫПЛАТ И УДЕРЖАНИЙ) -->
+  <div class="card" id="payslipCard">
+    <div class="card-header">
+      <h2 class="card-title">4. Расчётный лист за месяц: <span id="payslipMonthLabel">2026-11</span></h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;" class="no-print">
+        <button class="btn btn-outline" onclick="window.print()">🖨 Печать / PDF расчётника</button>
+      </div>
+    </div>
+
+    <div class="hint" id="payslipMetaLine" style="margin-top:0;margin-bottom:12px;"></div>
+
+    <div class="payslip-grid">
+      <div class="payslip-box">
+        <div class="payslip-box-title earn">I. Начисления (выплаты по категориям)</div>
+        <table class="payslip-table">
+          <tbody id="payslipEarnBody"></tbody>
+        </table>
+      </div>
+
+      <div class="payslip-box">
+        <div class="payslip-box-title ded">II. Налогооблагаемая база и удержания</div>
+        <table class="payslip-table">
+          <tbody id="payslipDedBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="payslip-net-banner">
+      <div>
+        <div class="lbl">III. Итого к выплате на счёт (НЕТТО)</div>
+        <div class="formula" id="payslipNetFormula">Брутто − Удержания</div>
+      </div>
+      <div class="val" id="payslipNetTotal">0.00 €</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ СМЕНЫ -->
@@ -698,18 +820,31 @@ function getEstonianHolidays(year) {
   return map;
 }
 
+function getShortenedPreHolidayKeys(year) {
+  // TLS § 53: рабочий день перед 1.01, 24.02, 23.06 и 24.12 сокращается на 3 часа
+  const set = new Set([
+    `${year}-02-23`,
+    `${year}-06-22`,
+    `${year}-12-23`,
+    `${year}-12-31`
+  ]);
+  return set;
+}
+
 function calcEstonianMonthNorm(year, monthIndex0) {
   const holidays = getEstonianHolidays(year);
+  const shortenedDays = getShortenedPreHolidayKeys(year);
   const daysInMonth = new Date(year, monthIndex0 + 1, 0).getDate();
-  let workdays = 0;
+  let totalHours = 0;
   for (let day = 1; day <= daysInMonth; day++) {
     const dt = new Date(year, monthIndex0, day);
     const dow = dt.getDay();
-    if (dow >= 1 && dow <= 5 && !holidays.has(toDateKey(dt))) {
-      workdays++;
+    const key = toDateKey(dt);
+    if (dow >= 1 && dow <= 5 && !holidays.has(key)) {
+      totalHours += shortenedDays.has(key) ? 5 : 8;
     }
   }
-  return workdays * 8;
+  return totalHours;
 }
 
 function calcNightHours(startMs, endMs) {
@@ -761,6 +896,7 @@ function makeDefaultMonthData(ymStr) {
     oklad: 2430.00,
     personalNorm: eeNorm,
     tuHours: 0,
+    otRate: 1.5,
     taxFree: 700.00,
     pitRate: 0.22,
     uiRate: 0.016,
@@ -899,6 +1035,8 @@ function renderMonthTabs() {
   document.getElementById("activeMonthBadge").textContent = state.activeMonth;
   document.getElementById("wizMonthLabel").textContent = state.activeMonth;
   document.getElementById("tableMonthLabel").textContent = state.activeMonth;
+  const psLbl = document.getElementById("payslipMonthLabel");
+  if (psLbl) psLbl.textContent = state.activeMonth;
 }
 
 function loadMonthToInputs() {
@@ -906,6 +1044,7 @@ function loadMonthToInputs() {
   document.getElementById("oklad").value = mData.oklad;
   document.getElementById("personalNorm").value = mData.personalNorm;
   document.getElementById("tuHours").value = mData.tuHours;
+  document.getElementById("otRate").value = mData.otRate !== undefined ? mData.otRate : 1.5;
   document.getElementById("taxFree").value = mData.taxFree;
   document.getElementById("pitRate").value = mData.pitRate;
   document.getElementById("uiRate").value = mData.uiRate;
@@ -918,6 +1057,7 @@ function saveMonthParamsAndRecalc() {
   mData.oklad = parseFloat(document.getElementById("oklad").value) || 0;
   mData.personalNorm = parseFloat(document.getElementById("personalNorm").value) || 1;
   mData.tuHours = parseFloat(document.getElementById("tuHours").value) || 0;
+  mData.otRate = parseFloat(document.getElementById("otRate").value) || 1.5;
   mData.taxFree = parseFloat(document.getElementById("taxFree").value) || 0;
   mData.pitRate = parseFloat(document.getElementById("pitRate").value) || 0;
   mData.uiRate = parseFloat(document.getElementById("uiRate").value) || 0;
@@ -1162,9 +1302,25 @@ function recalcAll() {
       monthHolidays.push(`${keyStr} (${hName})`);
     }
   });
-  document.getElementById("holidaysInfo").textContent = monthHolidays.length
-    ? "Официальные праздники Эстонии в месяце " + state.activeMonth + ": " + monthHolidays.join(", ")
-    : "Официальных праздников Эстонии в месяце " + state.activeMonth + " нет.";
+  const shortenedSet = getShortenedPreHolidayKeys(year);
+  const monthShortened = [];
+  shortenedSet.forEach(kStr => {
+    if (kStr.startsWith(`${year}-${String(monthIdx0 + 1).padStart(2, "0")}-`)) {
+      const [yy, mm, dd] = kStr.split("-").map(Number);
+      const dObj = new Date(yy, mm - 1, dd);
+      if (dObj.getDay() >= 1 && dObj.getDay() <= 5) {
+        monthShortened.push(`${kStr} (−3 ч)`);
+      }
+    }
+  });
+  let infoParts = [];
+  infoParts.push(monthHolidays.length
+    ? "Праздники Эстонии (" + state.activeMonth + "): " + monthHolidays.join(", ")
+    : "Официальных праздников Эстонии в месяце " + state.activeMonth + " нет");
+  if (monthShortened.length) {
+    infoParts.push("Сокращённые предпраздничные дни (TLS § 53): " + monthShortened.join(", "));
+  }
+  document.getElementById("holidaysInfo").textContent = infoParts.join(" • ") + ".";
 
   const normHours = mData.personalNorm || 1;
   const baseRate = mData.oklad / normHours;
@@ -1233,12 +1389,15 @@ function recalcAll() {
     });
   }
 
-  const basePay = Math.max(mData.oklad, totWork * baseRate);
+  const otRate = mData.otRate !== undefined ? mData.otRate : 1.5;
   const overtimeH = Math.max(0, totWork - normHours);
   const underworkH = Math.max(0, normHours - totWork);
+  const overtimePay = overtimeH * baseRate * otRate;
+  const basePay = mData.oklad;
 
   const gross =
     basePay +
+    overtimePay +
     totNight * baseRate * 0.25 +
     totSleep * 2.0 +
     totHol * baseRate +
@@ -1250,18 +1409,17 @@ function recalcAll() {
   const totalDed = uiDed + pitDed + mData.extraDed;
   const netPay = gross - totalDed;
 
-  const overtimePay = overtimeH * baseRate;
   document.getElementById("statRate").textContent = baseRate.toFixed(2) + " €/ч";
   document.getElementById("statWork").textContent = totWork.toFixed(2) + " ч";
   document.getElementById("statNormDiff").textContent = underworkH > 0
     ? `Недоработка: −${underworkH.toFixed(2)} ч (оклад сохранён)`
     : (overtimeH > 0 ? `Сверх нормы: +${overtimeH.toFixed(2)} ч` : "Ровно по норме");
   document.getElementById("statOvertime").textContent = overtimeH > 0
-    ? `+${overtimeH.toFixed(2)} ч`
+    ? `+${overtimeH.toFixed(2)} ч (×${otRate})`
     : "0.00 ч";
   document.getElementById("statOvertimePay").textContent = overtimeH > 0
     ? `Сверх оклада: +${overtimePay.toFixed(2)} €`
-    : "Сверх оклада: 0.00 €";
+    : `Сверх оклада: 0.00 € (×${otRate})`;
   const otCard = document.getElementById("statOvertimeCard");
   if (otCard) {
     otCard.className = overtimeH > 0 ? "stat good" : "stat";
@@ -1274,6 +1432,100 @@ function recalcAll() {
     : `Оклад + переработка + доплаты`;
   document.getElementById("statDed").textContent = totalDed.toFixed(2) + " €";
   document.getElementById("statNet").textContent = netPay.toFixed(2) + " €";
+
+  // Заполнение расчётного листа (ход исчисления по категориям)
+  const nightPay = totNight * baseRate * 0.25;
+  const sleepPay = totSleep * 2.0;
+  const holPay = totHol * baseRate;
+  const tuPay = mData.tuHours * baseRate;
+
+  const metaEl = document.getElementById("payslipMetaLine");
+  if (metaEl) {
+    metaEl.innerHTML =
+      `Норма Эстонии (TLS § 53): <b>${eeNorm.toFixed(2)} ч</b> • ` +
+      `Личная норма: <b>${normHours.toFixed(2)} ч</b> • ` +
+      `Отработано: <b>${totWork.toFixed(2)} ч</b> • ` +
+      `Базовая ставка: <b>${baseRate.toFixed(4)} €/ч</b> (${mData.oklad.toFixed(2)} € / ${normHours} ч)`;
+  }
+
+  const earnBody = document.getElementById("payslipEarnBody");
+  if (earnBody) {
+    const workStatusNote = underworkH > 0
+      ? `гарантированный оклад (недоработка −${underworkH.toFixed(2)} ч)`
+      : (overtimeH > 0 ? `за норму ${normHours.toFixed(2)} ч` : `норма выполнена (${totWork.toFixed(2)} ч)`);
+    earnBody.innerHTML = `
+      <tr>
+        <td><b>1. Основной оклад</b><br><span style="font-size:11px;color:var(--muted);">${workStatusNote}</span></td>
+        <td class="num"><b>${basePay.toFixed(2)} €</b></td>
+      </tr>
+      <tr>
+        <td><b>2. Переработка (TLS § 44)</b><br><span style="font-size:11px;color:var(--muted);">${overtimeH.toFixed(2)} ч × ${baseRate.toFixed(2)} €/ч × ${otRate}</span></td>
+        <td class="num">${overtimePay.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>3. Ночные часы (22:00–06:00, TLS § 45)</b><br><span style="font-size:11px;color:var(--muted);">${totNight.toFixed(2)} ч × ${baseRate.toFixed(2)} €/ч × 0.25</span></td>
+        <td class="num">${nightPay.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>4. Время сна в поездках</b><br><span style="font-size:11px;color:var(--muted);">${totSleep.toFixed(2)} ч × 2.00 €/ч</span></td>
+        <td class="num">${sleepPay.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>5. Праздничные часы (TLS § 45, доплата ×1)</b><br><span style="font-size:11px;color:var(--muted);">${totHol.toFixed(2)} ч × ${baseRate.toFixed(2)} €/ч</span></td>
+        <td class="num">${holPay.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>6. Техническая учёба (Т/У)</b><br><span style="font-size:11px;color:var(--muted);">${mData.tuHours.toFixed(2)} ч × ${baseRate.toFixed(2)} €/ч</span></td>
+        <td class="num">${tuPay.toFixed(2)} €</td>
+      </tr>
+      <tr class="ps-total">
+        <td>ИТОГО НАЧИСЛЕНО (БРУТТО)</td>
+        <td class="num">${gross.toFixed(2)} €</td>
+      </tr>
+    `;
+  }
+
+  const dedBody = document.getElementById("payslipDedBody");
+  if (dedBody) {
+    const uiPct = (mData.uiRate * 100).toFixed(1);
+    const pitPct = (mData.pitRate * 100).toFixed(0);
+    const appliedTaxFree = Math.min(mData.taxFree, Math.max(0, gross - uiDed));
+    dedBody.innerHTML = `
+      <tr>
+        <td><b>1. Страховка от безработицы (${uiPct}%)</b><br><span style="font-size:11px;color:var(--muted);">${gross.toFixed(2)} € × ${mData.uiRate}</span></td>
+        <td class="num">−${uiDed.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>2. Применённый необлагаемый минимум</b><br><span style="font-size:11px;color:var(--muted);">лимит ${mData.taxFree.toFixed(2)} € / мес</span></td>
+        <td class="num">${appliedTaxFree.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>3. Налогооблагаемая база ПДН</b><br><span style="font-size:11px;color:var(--muted);">${gross.toFixed(2)} − ${uiDed.toFixed(2)} − ${appliedTaxFree.toFixed(2)}${mData.extraDed > 0 ? " − " + mData.extraDed.toFixed(2) : ""}</span></td>
+        <td class="num">${taxable.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>4. Подоходный налог (tulumaks, ${pitPct}%)</b><br><span style="font-size:11px;color:var(--muted);">${taxable.toFixed(2)} € × ${mData.pitRate}</span></td>
+        <td class="num">−${pitDed.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>5. Дополнительные вычеты</b><br><span style="font-size:11px;color:var(--muted);">прочие удержания</span></td>
+        <td class="num">−${mData.extraDed.toFixed(2)} €</td>
+      </tr>
+      <tr class="ps-total">
+        <td>ИТОГО УДЕРЖАНО</td>
+        <td class="num">−${totalDed.toFixed(2)} €</td>
+      </tr>
+    `;
+  }
+
+  const netFormulaEl = document.getElementById("payslipNetFormula");
+  const netTotalEl = document.getElementById("payslipNetTotal");
+  if (netFormulaEl) {
+    netFormulaEl.textContent = `Начислено (брутто) ${gross.toFixed(2)} € − Удержания ${totalDed.toFixed(2)} €`;
+  }
+  if (netTotalEl) {
+    netTotalEl.textContent = `${netPay.toFixed(2)} €`;
+  }
 }
 
 function exportCSV() {
