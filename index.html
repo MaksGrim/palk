@@ -458,10 +458,7 @@
               <option value="long">Длинная смена со сном (два интервала)</option>
             </select>
           </div>
-          <div class="field">
-            <label>Номер поездки / смены</label>
-            <input type="text" id="wizTripNo" placeholder="Например: 1" />
-          </div>
+
         </div>
         <div class="field">
           <label>Направление / станция / участок</label>
@@ -536,7 +533,6 @@
         <thead>
           <tr>
             <th>#</th>
-            <th>Поездка</th>
             <th>Тип</th>
             <th>Направление</th>
             <th>Явка</th>
@@ -550,7 +546,7 @@
           </tr>
         </thead>
         <tbody id="shiftsTbody">
-          <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:16px;">За этот месяц смен пока нет.</td></tr>
+          <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:16px;">За этот месяц смен пока нет.</td></tr>
         </tbody>
       </table>
     </div>
@@ -567,10 +563,7 @@
     </div>
     <input type="hidden" id="editShiftId" />
     <div class="grid-2">
-      <div class="field">
-        <label>Поездка / смена</label>
-        <input type="text" id="editTrip" />
-      </div>
+
       <div class="field">
         <label>Тип</label>
         <input type="text" id="editKindLabel" />
@@ -945,7 +938,7 @@ function saveShiftFromWizard() {
   const mData = state.months[state.activeMonth];
   if (!mData) return;
 
-  const tripNo = document.getElementById("wizTripNo").value.trim();
+
   const route = document.getElementById("wizRoute").value.trim();
   const s1 = document.getElementById("wizStart1").value;
   const e1 = document.getElementById("wizEnd1").value;
@@ -958,7 +951,6 @@ function saveShiftFromWizard() {
   if (currentWizardKind === "short") {
     mData.shifts.push({
       id: Date.now() + Math.random(),
-      trip: tripNo,
       kindLabel: "Короткая",
       route,
       startMs: start1Ms,
@@ -985,7 +977,6 @@ function saveShiftFromWizard() {
 
     mData.shifts.push({
       id: Date.now() + Math.random(),
-      trip: tripNo,
       kindLabel: "Длинная (1-я часть)",
       route,
       startMs: start1Ms,
@@ -996,7 +987,6 @@ function saveShiftFromWizard() {
     });
     mData.shifts.push({
       id: Date.now() + Math.random() + 1,
-      trip: tripNo,
       kindLabel: "Длинная (2-я часть со сном)",
       route,
       startMs: start2Ms,
@@ -1034,7 +1024,6 @@ function openEditShiftModal(id) {
   if (!shift) return;
 
   document.getElementById("editShiftId").value = shift.id;
-  document.getElementById("editTrip").value = shift.trip || "";
   document.getElementById("editKindLabel").value = shift.kindLabel || "";
   document.getElementById("editRoute").value = shift.route || "";
   document.getElementById("editStart").value = toInputDt(shift.startMs);
@@ -1064,7 +1053,6 @@ function saveEditedShift() {
     return;
   }
 
-  shift.trip = document.getElementById("editTrip").value.trim();
   shift.kindLabel = document.getElementById("editKindLabel").value.trim() || shift.kindLabel;
   shift.route = document.getElementById("editRoute").value.trim();
   shift.startMs = startMs;
@@ -1083,7 +1071,7 @@ function deleteShift(id) {
   if (!mData) return;
   const shift = mData.shifts.find(s => s.id === id);
   const info = shift
-    ? ` смену #${shift.trip || "—"} (${shift.route || "без направления"}, ${fmtDt(shift.startMs)})`
+    ? ` смену (${shift.route || "без направления"}, ${fmtDt(shift.startMs)})`
     : " эту смену";
   if (!confirm(`Удалить${info}?`)) return;
   mData.shifts = mData.shifts.filter(s => s.id !== id);
@@ -1139,7 +1127,7 @@ function recalcAll() {
   let totWork = 0, totNight = 0, totSleep = 0, totHol = 0;
 
   if (!mData.shifts.length) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:16px;">За выбранный месяц смен пока нет.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:16px;">За выбранный месяц смен пока нет.</td></tr>';
   } else {
     mData.shifts.forEach((s, idx) => {
       const nightH = calcNightHours(s.startMs, s.endMs);
@@ -1152,7 +1140,6 @@ function recalcAll() {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${idx + 1}</td>
-        <td>${s.trip || "—"}</td>
         <td>${s.kindLabel}</td>
         <td>${s.route || "—"}</td>
         <td>${fmtDt(s.startMs)}</td>
@@ -1211,14 +1198,13 @@ function exportCSV() {
   const holidaysMap = getEstonianHolidays(parseInt(yStr, 10) || 2026);
 
   const rows = [
-    ["#", "Поездка", "Тип", "Направление", "Явка", "Конец", "Раб_ч", "Ночные_ч", "Сон_ч", "Праздн_ч", "Примечание"]
+    ["#", "Тип", "Направление", "Явка", "Конец", "Раб_ч", "Ночные_ч", "Сон_ч", "Праздн_ч", "Примечание"]
   ];
   mData.shifts.forEach((s, idx) => {
     const nightH = calcNightHours(s.startMs, s.endMs);
     const holH = calcHolidayHours(s.startMs, s.endMs, holidaysMap);
     rows.push([
       idx + 1,
-      s.trip || "",
       s.kindLabel,
       s.route || "",
       fmtDt(s.startMs),
