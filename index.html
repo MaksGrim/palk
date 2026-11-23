@@ -289,6 +289,37 @@
     white-space: nowrap;
   }
   tr:nth-child(even) td { background: #f8fafc; }
+  tr.trip-part-1 td {
+    background: #eef6ff !important;
+    border-top: 2px solid #2563eb;
+    border-bottom: 1px dashed #93c5fd;
+  }
+  tr.trip-part-2 td {
+    background: #eef6ff !important;
+    border-top: 1px dashed #93c5fd;
+    border-bottom: 2px solid #2563eb;
+  }
+  tr.trip-part-1 td:first-child,
+  tr.trip-part-2 td:first-child {
+    border-left: 4px solid #2563eb;
+  }
+  .type-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .type-badge.shift {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+  .type-badge.trip {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+  }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .table-wrap {
     overflow-x: auto;
@@ -454,8 +485,8 @@
           <div class="field">
             <label>Вид смены</label>
             <select id="wizShiftKind">
-              <option value="short">Короткая смена (один интервал)</option>
-              <option value="long">Длинная смена со сном (два интервала)</option>
+              <option value="short">Смена (один интервал)</option>
+              <option value="long">Поездка (два интервала со сном)</option>
             </select>
           </div>
 
@@ -951,7 +982,7 @@ function saveShiftFromWizard() {
   if (currentWizardKind === "short") {
     mData.shifts.push({
       id: Date.now() + Math.random(),
-      kindLabel: "Короткая",
+      kindLabel: "Смена",
       route,
       startMs: start1Ms,
       endMs: end1Ms,
@@ -963,7 +994,7 @@ function saveShiftFromWizard() {
     const s2 = document.getElementById("wizStart2").value;
     const e2 = document.getElementById("wizEnd2").value;
     if (!s2 || !e2) {
-      alert("Для длинной смены со сном укажите явку и конец 2-й части.");
+      alert("Для поездки со сном укажите явку и конец 2-й части.");
       return;
     }
     const start2Ms = new Date(s2).getTime();
@@ -974,10 +1005,13 @@ function saveShiftFromWizard() {
     }
     const sleepH = (start2Ms - end1Ms) / 3600000;
     const work2H = (end2Ms - start2Ms) / 3600000;
+    const grpId = "trip_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
 
     mData.shifts.push({
       id: Date.now() + Math.random(),
-      kindLabel: "Длинная (1-я часть)",
+      groupId: grpId,
+      tripPart: 1,
+      kindLabel: "Поездка",
       route,
       startMs: start1Ms,
       endMs: end1Ms,
@@ -987,13 +1021,15 @@ function saveShiftFromWizard() {
     });
     mData.shifts.push({
       id: Date.now() + Math.random() + 1,
-      kindLabel: "Длинная (2-я часть со сном)",
+      groupId: grpId,
+      tripPart: 2,
+      kindLabel: "Поездка",
       route,
       startMs: start2Ms,
       endMs: end2Ms,
       workH: work2H,
       sleepH,
-      note: note ? note + " (после сна)" : "После сна"
+      note: note || ""
     });
   }
 
@@ -1137,10 +1173,36 @@ function recalcAll() {
       totSleep += s.sleepH;
       totHol += holH;
 
+      const rawKind = (s.kindLabel || "").toLowerCase();
+      const isTrip = Boolean(s.groupId) || rawKind.includes("длинн") || rawKind.includes("поездк");
+      const displayKind = isTrip ? "Поездка" : "Смена";
+
+      const prevS = idx > 0 ? mData.shifts[idx - 1] : null;
+      const nextS = idx < mData.shifts.length - 1 ? mData.shifts[idx + 1] : null;
+
+      let partRole = 0;
+      if (isTrip) {
+        if (s.groupId) {
+          if (nextS && nextS.groupId === s.groupId) partRole = 1;
+          else if (prevS && prevS.groupId === s.groupId) partRole = 2;
+          else partRole = s.tripPart === 2 ? 2 : 1;
+        } else {
+          if (rawKind.includes("2-я") || (prevS && (prevS.kindLabel || "").toLowerCase().includes("1-я"))) partRole = 2;
+          else partRole = 1;
+        }
+      }
+
       const tr = document.createElement("tr");
+      if (partRole === 1) tr.className = "trip-part-1";
+      else if (partRole === 2) tr.className = "trip-part-2";
+
+      const badgeHtml = isTrip
+        ? `<span class="type-badge trip">Поездка</span>`
+        : `<span class="type-badge shift">Смена</span>`;
+
       tr.innerHTML = `
         <td>${idx + 1}</td>
-        <td>${s.kindLabel}</td>
+        <td>${badgeHtml}</td>
         <td>${s.route || "—"}</td>
         <td>${fmtDt(s.startMs)}</td>
         <td>${fmtDt(s.endMs)}</td>
@@ -1151,8 +1213,8 @@ function recalcAll() {
         <td>${s.note || ""}</td>
         <td>
           <div class="row-actions">
-            <button class="btn btn-edit" title="Изменить смену" onclick="openEditShiftModal('${s.id}')">✎</button>
-            <button class="btn btn-danger" title="Удалить смену" onclick="deleteShift(${s.id})">✕</button>
+            <button class="btn btn-edit" title="Изменить" onclick="openEditShiftModal('${s.id}')">✎</button>
+            <button class="btn btn-danger" title="Удалить" onclick="deleteShift(${s.id})">✕</button>
           </div>
         </td>
       `;
@@ -1205,7 +1267,7 @@ function exportCSV() {
     const holH = calcHolidayHours(s.startMs, s.endMs, holidaysMap);
     rows.push([
       idx + 1,
-      s.kindLabel,
+      (Boolean(s.groupId) || (s.kindLabel || "").toLowerCase().includes("длинн") || (s.kindLabel || "").toLowerCase().includes("поездк")) ? "Поездка" : "Смена",
       s.route || "",
       fmtDt(s.startMs),
       fmtDt(s.endMs),
