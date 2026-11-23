@@ -289,6 +289,14 @@
     white-space: nowrap;
   }
   tr:nth-child(even) td { background: #f8fafc; }
+  tr.shift-row td {
+    background: #f4f7f5 !important;
+    border-top: 1px solid #d5e0da;
+    border-bottom: 1px solid #d5e0da;
+  }
+  tr.shift-row td:first-child {
+    border-left: 3px solid #6b8e7b;
+  }
   tr.trip-part-1 td {
     background: #eef6ff !important;
     border-top: 2px solid #2563eb;
@@ -354,7 +362,7 @@
 
 <header>
   <h1>Пошаговый учёт смен и зарплаты по месяцам (Эстония)</h1>
-  <div class="sub">Несколько месяцев • Скрытие/показ месяцев • Автопраздники Эстонии • Короткие и длинные смены со сном</div>
+  <div class="sub">Несколько месяцев • Скрытие/показ месяцев • Автопраздники Эстонии • Смены и поездки со сном</div>
 </header>
 
 <div class="container">
@@ -473,8 +481,8 @@
   <!-- ПОШАГОВЫЙ МАСТЕР ДОБАВЛЕНИЯ СМЕНЫ -->
   <div class="card">
     <div class="card-header">
-      <h2 class="card-title">2. Пошаговый ввод смены в месяц <span id="wizMonthLabel">2026-11</span></h2>
-      <div style="font-size:12px;color:var(--muted);">Короткая смена = 1 интервал • Длинная смена со сном = 2 интервала (сон считается автоматически)</div>
+      <h2 class="card-title">2. Пошаговый ввод смены / поездки в месяц <span id="wizMonthLabel">2026-11</span></h2>
+      <div style="font-size:12px;color:var(--muted);">Смена = 1 интервал • Поездка со сном = 2 интервала (сон считается автоматически)</div>
     </div>
 
     <div class="wizard-box">
@@ -483,13 +491,12 @@
       <div id="stepPanel1">
         <div class="grid-2">
           <div class="field">
-            <label>Вид смены</label>
+            <label>Вид записи</label>
             <select id="wizShiftKind">
               <option value="short">Смена (один интервал)</option>
               <option value="long">Поездка (два интервала со сном)</option>
             </select>
           </div>
-
         </div>
         <div class="field">
           <label>Направление / станция / участок</label>
@@ -525,7 +532,7 @@
             <input type="datetime-local" id="wizStart2" />
           </div>
           <div class="field">
-            <label>2-я часть: Конец смены (YYYY-MM-DDTHH:MM)</label>
+            <label>2-я часть: Конец поездки (YYYY-MM-DDTHH:MM)</label>
             <input type="datetime-local" id="wizEnd2" />
           </div>
         </div>
@@ -542,7 +549,7 @@
         </div>
         <div class="actions-bar">
           <button class="btn btn-outline" onclick="backFromStep4()">← Назад</button>
-          <button class="btn btn-teal" onclick="saveShiftFromWizard()">✓ Добавить смену в выбранный месяц</button>
+          <button class="btn btn-teal" onclick="saveShiftFromWizard()">✓ Добавить в выбранный месяц</button>
         </div>
       </div>
 
@@ -552,7 +559,7 @@
   <!-- ТАБЛИЦА СМЕН ПО ВЫБРАННОМУ МЕСЯЦУ -->
   <div class="card">
     <div class="card-header">
-      <h2 class="card-title">3. Просмотр смен за месяц: <span id="tableMonthLabel">2026-11</span></h2>
+      <h2 class="card-title">3. Просмотр смен и поездок за месяц: <span id="tableMonthLabel">2026-11</span></h2>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-outline" onclick="exportCSV()">Скачать CSV месяца (для Calc / Excel)</button>
         <button class="btn btn-danger" onclick="clearCurrentMonthShifts()">Очистить месяц</button>
@@ -589,12 +596,11 @@
 <div class="modal-backdrop" id="editModal" onclick="if(event.target===this)closeEditModal()">
   <div class="modal-card">
     <div class="card-header" style="margin-bottom:12px;">
-      <h3 class="card-title">Изменить смену</h3>
+      <h3 class="card-title">Изменить запись</h3>
       <button class="btn btn-outline" style="padding:4px 9px;" onclick="closeEditModal()">✕</button>
     </div>
     <input type="hidden" id="editShiftId" />
     <div class="grid-2">
-
       <div class="field">
         <label>Тип</label>
         <input type="text" id="editKindLabel" />
@@ -930,9 +936,9 @@ function goStep(stepNum) {
   document.getElementById("stepPanel3").style.display = stepNum === 3 ? "block" : "none";
   document.getElementById("stepPanel4").style.display = stepNum === 4 ? "block" : "none";
   const labels = {
-    1: "Шаг 1 из 5 — Тип смены и направление",
-    2: "Шаг 2 из 5 — Явка и конец смены (1-я часть)",
-    3: "Шаг 3 из 5 — 2-я часть длинной смены (после сна)",
+    1: "Шаг 1 из 5 — Тип записи и направление",
+    2: "Шаг 2 из 5 — Явка и конец (1-я часть)",
+    3: "Шаг 3 из 5 — 2-я часть поездки (после сна)",
     4: "Шаг 4–5 из 5 — Примечание и добавление в месяц"
   };
   document.getElementById("stepIndicator").textContent = labels[stepNum] || "";
@@ -942,7 +948,7 @@ function handleAfterPart1() {
   const s1 = document.getElementById("wizStart1").value;
   const e1 = document.getElementById("wizEnd1").value;
   if (!s1 || !e1) {
-    alert("Укажите дату и время явки и конца смены.");
+    alert("Укажите дату и время явки и конца.");
     return;
   }
   const tStart = new Date(s1).getTime();
@@ -968,7 +974,6 @@ function backFromStep4() {
 function saveShiftFromWizard() {
   const mData = state.months[state.activeMonth];
   if (!mData) return;
-
 
   const route = document.getElementById("wizRoute").value.trim();
   const s1 = document.getElementById("wizStart1").value;
@@ -1085,7 +1090,7 @@ function saveEditedShift() {
   const startMs = new Date(sVal).getTime();
   const endMs = new Date(eVal).getTime();
   if (!sVal || !eVal || isNaN(startMs) || isNaN(endMs) || endMs <= startMs) {
-    alert("Проверьте дату и время: конец смены должен быть позже явки.");
+    alert("Проверьте дату и время: конец должен быть позже явки.");
     return;
   }
 
@@ -1107,8 +1112,8 @@ function deleteShift(id) {
   if (!mData) return;
   const shift = mData.shifts.find(s => s.id === id);
   const info = shift
-    ? ` смену (${shift.route || "без направления"}, ${fmtDt(shift.startMs)})`
-    : " эту смену";
+    ? ` запись (${shift.route || "без направления"}, ${fmtDt(shift.startMs)})`
+    : " эту запись";
   if (!confirm(`Удалить${info}?`)) return;
   mData.shifts = mData.shifts.filter(s => s.id !== id);
   persistState();
@@ -1118,7 +1123,7 @@ function deleteShift(id) {
 function clearCurrentMonthShifts() {
   const mData = state.months[state.activeMonth];
   if (!mData || !mData.shifts.length) return;
-  if (confirm(`Очистить все смены за ${state.activeMonth}?`)) {
+  if (confirm(`Очистить все смены и поездки за ${state.activeMonth}?`)) {
     mData.shifts = [];
     persistState();
     recalcAll();
@@ -1175,7 +1180,6 @@ function recalcAll() {
 
       const rawKind = (s.kindLabel || "").toLowerCase();
       const isTrip = Boolean(s.groupId) || rawKind.includes("длинн") || rawKind.includes("поездк");
-      const displayKind = isTrip ? "Поездка" : "Смена";
 
       const prevS = idx > 0 ? mData.shifts[idx - 1] : null;
       const nextS = idx < mData.shifts.length - 1 ? mData.shifts[idx + 1] : null;
@@ -1195,6 +1199,7 @@ function recalcAll() {
       const tr = document.createElement("tr");
       if (partRole === 1) tr.className = "trip-part-1";
       else if (partRole === 2) tr.className = "trip-part-2";
+      else if (!isTrip) tr.className = "shift-row";
 
       const badgeHtml = isTrip
         ? `<span class="type-badge trip">Поездка</span>`
