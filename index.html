@@ -456,6 +456,9 @@
         <input type="month" id="newMonthInput" value="2026-12" />
         <button class="btn btn-teal" onclick="addOrSwitchMonth()">+ Добавить / открыть месяц</button>
         <button class="btn btn-amber" id="hideMonthBtn" onclick="hideActiveMonth()" title="Скрыть активный месяц из панели вкладок (данные сохранятся)">🙈 Скрыть месяц</button>
+        <button class="btn btn-outline" onclick="exportAllJSON()" title="Сохранить все месяцы, смены и настройки в один файл для переноса на телефон/ПК">⬇ Экспорт JSON (вся база)</button>
+        <button class="btn btn-outline" onclick="document.getElementById('importJsonInput').click()" title="Загрузить ранее сохранённый JSON-файл">⬆ Импорт JSON</button>
+        <input type="file" id="importJsonInput" accept=".json,application/json" style="display:none;" onchange="importAllJSON(event)" />
       </div>
     </div>
     <div class="month-bar">
@@ -1561,6 +1564,75 @@ function exportCSV() {
   a.download = `рабочие_часы_${state.activeMonth}.csv`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportAllJSON() {
+  const payload = {
+    app: "tunnid_master",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    state: state
+  };
+  const jsonStr = JSON.stringify(payload, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const dateTag = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `palk_backup_${dateTag}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importAllJSON(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      const importedState = (parsed && parsed.state && parsed.state.months) ? parsed.state : parsed;
+      if (!importedState || !importedState.months || typeof importedState.months !== "object" || !Object.keys(importedState.months).length) {
+        alert("Ошибка: файл не содержит корректных данных калькулятора.");
+        return;
+      }
+      const modeReplace = confirm(
+        "Нажмите «ОК», чтобы ПОЛНОСТЬЮ ЗАМЕНИТЬ текущую базу данными из файла.\n" +
+        "Нажмите «Отмена», чтобы ДОБАВИТЬ/ОБЪЕДИНИТЬ месяцы из файла с текущими."
+      );
+      if (modeReplace) {
+        state = importedState;
+      } else {
+        Object.keys(importedState.months).forEach(ym => {
+          state.months[ym] = importedState.months[ym];
+        });
+        if (importedState.activeMonth && state.months[importedState.activeMonth]) {
+          state.activeMonth = importedState.activeMonth;
+        }
+      }
+      Object.keys(state.months).forEach(k => {
+        if (typeof state.months[k].hidden !== "boolean") state.months[k].hidden = false;
+      });
+      const visible = getVisibleMonths();
+      if (!visible.length) {
+        const firstKey = Object.keys(state.months).sort()[0];
+        state.months[firstKey].hidden = false;
+        state.activeMonth = firstKey;
+      } else if (!state.activeMonth || !state.months[state.activeMonth] || state.months[state.activeMonth].hidden) {
+        state.activeMonth = visible[0];
+      }
+      persistState();
+      loadMonthToInputs();
+      renderMonthTabs();
+      recalcAll();
+      alert("Данные успешно загружены! Всего месяцев в базе: " + Object.keys(state.months).length);
+    } catch (err) {
+      alert("Не удалось прочитать JSON-файл. Проверьте, что выбран правильный файл резервной копии.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+  reader.readAsText(file, "utf-8");
 }
 
 loadState();
