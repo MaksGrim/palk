@@ -506,13 +506,17 @@
         </div>
         <div class="grid-2" style="gap:8px;">
           <div class="field">
-            <label>Дополнительные платы (€)</label>
-            <input type="number" step="0.01" id="extraPay" value="0.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
+            <label>Премия (€)</label>
+            <input type="number" step="0.01" id="bonusPay" value="0.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
           </div>
           <div class="field">
-            <label>Доп. вычеты (€)</label>
-            <input type="number" step="0.01" id="extraDed" value="0.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
+            <label>Выплата за транспорт (€)</label>
+            <input type="number" step="0.01" id="extraPay" value="0.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
           </div>
+        </div>
+        <div class="field">
+          <label>Доп. вычеты (€)</label>
+          <input type="number" step="0.01" id="extraDed" value="0.00" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
         </div>
       </div>
     </div>
@@ -853,6 +857,7 @@ function makeDefaultMonthData(ymStr) {
     taxFree: 700.00,
     pitRate: 0.22,
     uiRate: 0.016,
+    bonusPay: 0.00,
     extraPay: 0.00,
     extraDed: 0.00,
     hidden: false,
@@ -878,6 +883,7 @@ function loadState() {
           if (typeof state.months[k].hidden !== "boolean") state.months[k].hidden = false;
           if (typeof state.months[k].oklad !== "number") state.months[k].oklad = 1630.00;
         if (typeof state.months[k].extraPay !== "number") state.months[k].extraPay = 0.00;
+          if (typeof state.months[k].bonusPay !== "number") state.months[k].bonusPay = 0.00;
           if (typeof state.months[k].extraPay !== "number") state.months[k].extraPay = 0.00;
         });
         const visible = getVisibleMonths();
@@ -1005,6 +1011,7 @@ function loadMonthToInputs() {
   document.getElementById("taxFree").value = mData.taxFree;
   document.getElementById("pitRate").value = mData.pitRate;
   document.getElementById("uiRate").value = mData.uiRate;
+  document.getElementById("bonusPay").value = mData.bonusPay || 0;
   document.getElementById("extraPay").value = mData.extraPay || 0;
   document.getElementById("extraDed").value = mData.extraDed;
 }
@@ -1019,6 +1026,7 @@ function saveMonthParamsAndRecalc() {
   mData.taxFree = parseFloat(document.getElementById("taxFree").value) || 0;
   mData.pitRate = parseFloat(document.getElementById("pitRate").value) || 0;
   mData.uiRate = parseFloat(document.getElementById("uiRate").value) || 0;
+  mData.bonusPay = parseFloat(document.getElementById("bonusPay").value) || 0;
   mData.extraPay = parseFloat(document.getElementById("extraPay").value) || 0;
   mData.extraDed = parseFloat(document.getElementById("extraDed").value) || 0;
   persistState();
@@ -1306,9 +1314,10 @@ function recalcAll() {
   const nightPay = totNight * baseRate * 0.25;
   const holPay = totHol * baseRate;
   const tuPay = mData.tuHours * baseRate;
+  const bonusPay = mData.bonusPay || 0;
   const extraPay = mData.extraPay || 0;
 
-  const gross = basePay + overtimePay + nightPay + holPay + tuPay + extraPay;
+  const gross = basePay + overtimePay + nightPay + holPay + tuPay + bonusPay + extraPay;
 
   const uiDed = gross * mData.uiRate;
   const taxable = Math.max(0, gross - uiDed - mData.taxFree - mData.extraDed);
@@ -1378,7 +1387,11 @@ function recalcAll() {
         <td class="num">${tuPay.toFixed(2)} €</td>
       </tr>
       <tr>
-        <td><b>6. Дополнительные платы</b><br><span style="font-size:11px;color:var(--muted);">доплаты / премии / прочие начисления</span></td>
+        <td><b>6. Премия</b><br><span style="font-size:11px;color:var(--muted);">премиальные начисления</span></td>
+        <td class="num">${bonusPay.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>7. Выплата за транспорт</b><br><span style="font-size:11px;color:var(--muted);">компенсация / транспортные выплаты</span></td>
         <td class="num">${extraPay.toFixed(2)} €</td>
       </tr>
       <tr class="ps-total">
