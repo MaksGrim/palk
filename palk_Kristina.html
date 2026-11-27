@@ -504,6 +504,10 @@
             <input type="number" step="0.001" id="uiRate" value="0.016" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
           </div>
         </div>
+        <div class="field">
+          <label>Пенсия II ступень (kogumispension, 0.02 = 2%)</label>
+          <input type="number" step="0.001" min="0" id="pensionRate" value="0.02" class="top-param" disabled onchange="saveMonthParamsAndRecalc()" />
+        </div>
         <div class="grid-2" style="gap:8px;">
           <div class="field">
             <label>Премия (€)</label>
@@ -554,7 +558,7 @@
         <div class="sub-v" id="statGrossHint">Часы × ставка + доплаты</div>
       </div>
       <div class="stat warn">
-        <div class="k">Удержания (ПДН + страх.)</div>
+        <div class="k">Удержания (ПДН + страх. + пенс.)</div>
         <div class="v" id="statDed">0.00 €</div>
       </div>
       <div class="stat good">
@@ -857,6 +861,7 @@ function makeDefaultMonthData(ymStr) {
     taxFree: 700.00,
     pitRate: 0.22,
     uiRate: 0.016,
+    pensionRate: 0.02,
     bonusPay: 0.00,
     extraPay: 0.00,
     extraDed: 0.00,
@@ -882,8 +887,10 @@ function loadState() {
         Object.keys(state.months).forEach(k => {
           if (typeof state.months[k].hidden !== "boolean") state.months[k].hidden = false;
           if (typeof state.months[k].oklad !== "number") state.months[k].oklad = 1630.00;
+        if (typeof state.months[k].pensionRate !== "number") state.months[k].pensionRate = 0.02;
         if (typeof state.months[k].extraPay !== "number") state.months[k].extraPay = 0.00;
           if (typeof state.months[k].bonusPay !== "number") state.months[k].bonusPay = 0.00;
+          if (typeof state.months[k].pensionRate !== "number") state.months[k].pensionRate = 0.02;
           if (typeof state.months[k].extraPay !== "number") state.months[k].extraPay = 0.00;
         });
         const visible = getVisibleMonths();
@@ -1011,6 +1018,7 @@ function loadMonthToInputs() {
   document.getElementById("taxFree").value = mData.taxFree;
   document.getElementById("pitRate").value = mData.pitRate;
   document.getElementById("uiRate").value = mData.uiRate;
+  document.getElementById("pensionRate").value = mData.pensionRate !== undefined ? mData.pensionRate : 0.02;
   document.getElementById("bonusPay").value = mData.bonusPay || 0;
   document.getElementById("extraPay").value = mData.extraPay || 0;
   document.getElementById("extraDed").value = mData.extraDed;
@@ -1026,6 +1034,7 @@ function saveMonthParamsAndRecalc() {
   mData.taxFree = parseFloat(document.getElementById("taxFree").value) || 0;
   mData.pitRate = parseFloat(document.getElementById("pitRate").value) || 0;
   mData.uiRate = parseFloat(document.getElementById("uiRate").value) || 0;
+  mData.pensionRate = parseFloat(document.getElementById("pensionRate").value) || 0;
   mData.bonusPay = parseFloat(document.getElementById("bonusPay").value) || 0;
   mData.extraPay = parseFloat(document.getElementById("extraPay").value) || 0;
   mData.extraDed = parseFloat(document.getElementById("extraDed").value) || 0;
@@ -1319,10 +1328,12 @@ function recalcAll() {
 
   const gross = basePay + overtimePay + nightPay + holPay + tuPay + bonusPay + extraPay;
 
+  const pensionRate = mData.pensionRate !== undefined ? mData.pensionRate : 0.02;
   const uiDed = gross * mData.uiRate;
-  const taxable = Math.max(0, gross - uiDed - mData.taxFree - mData.extraDed);
+  const pensionDed = gross * pensionRate;
+  const taxable = Math.max(0, gross - uiDed - pensionDed - mData.taxFree - mData.extraDed);
   const pitDed = taxable * mData.pitRate;
-  const totalDed = uiDed + pitDed + mData.extraDed;
+  const totalDed = uiDed + pensionDed + pitDed + mData.extraDed;
   const netPay = gross - totalDed;
 
   document.getElementById("statRate").textContent = baseRate.toFixed(2) + " €/ч";
@@ -1404,27 +1415,32 @@ function recalcAll() {
   const dedBody = document.getElementById("payslipDedBody");
   if (dedBody) {
     const uiPct = (mData.uiRate * 100).toFixed(1);
+    const penPct = (pensionRate * 100).toFixed(1);
     const pitPct = (mData.pitRate * 100).toFixed(0);
-    const appliedTaxFree = Math.min(mData.taxFree, Math.max(0, gross - uiDed));
+    const appliedTaxFree = Math.min(mData.taxFree, Math.max(0, gross - uiDed - pensionDed));
     dedBody.innerHTML = `
       <tr>
         <td><b>1. Страховка от безработицы (${uiPct}%)</b><br><span style="font-size:11px;color:var(--muted);">${gross.toFixed(2)} € × ${mData.uiRate}</span></td>
         <td class="num">−${uiDed.toFixed(2)} €</td>
       </tr>
       <tr>
-        <td><b>2. Применённый необлагаемый минимум</b><br><span style="font-size:11px;color:var(--muted);">лимит ${mData.taxFree.toFixed(2)} € / мес</span></td>
+        <td><b>2. Накопительная пенсия II ступень (${penPct}%)</b><br><span style="font-size:11px;color:var(--muted);">${gross.toFixed(2)} € × ${pensionRate}</span></td>
+        <td class="num">−${pensionDed.toFixed(2)} €</td>
+      </tr>
+      <tr>
+        <td><b>3. Применённый необлагаемый минимум</b><br><span style="font-size:11px;color:var(--muted);">лимит ${mData.taxFree.toFixed(2)} € / мес</span></td>
         <td class="num">${appliedTaxFree.toFixed(2)} €</td>
       </tr>
       <tr>
-        <td><b>3. Налогооблагаемая база ПДН</b><br><span style="font-size:11px;color:var(--muted);">${gross.toFixed(2)} − ${uiDed.toFixed(2)} − ${appliedTaxFree.toFixed(2)}${mData.extraDed > 0 ? " − " + mData.extraDed.toFixed(2) : ""}</span></td>
+        <td><b>4. Налогооблагаемая база ПДН</b><br><span style="font-size:11px;color:var(--muted);">${gross.toFixed(2)} − ${uiDed.toFixed(2)} − ${pensionDed.toFixed(2)} − ${appliedTaxFree.toFixed(2)}${mData.extraDed > 0 ? " − " + mData.extraDed.toFixed(2) : ""}</span></td>
         <td class="num">${taxable.toFixed(2)} €</td>
       </tr>
       <tr>
-        <td><b>4. Подоходный налог (tulumaks, ${pitPct}%)</b><br><span style="font-size:11px;color:var(--muted);">${taxable.toFixed(2)} € × ${mData.pitRate}</span></td>
+        <td><b>5. Подоходный налог (tulumaks, ${pitPct}%)</b><br><span style="font-size:11px;color:var(--muted);">${taxable.toFixed(2)} € × ${mData.pitRate}</span></td>
         <td class="num">−${pitDed.toFixed(2)} €</td>
       </tr>
       <tr>
-        <td><b>5. Дополнительные вычеты</b><br><span style="font-size:11px;color:var(--muted);">прочие удержания</span></td>
+        <td><b>6. Дополнительные вычеты</b><br><span style="font-size:11px;color:var(--muted);">прочие удержания</span></td>
         <td class="num">−${mData.extraDed.toFixed(2)} €</td>
       </tr>
       <tr class="ps-total">
