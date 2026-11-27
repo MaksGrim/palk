@@ -848,6 +848,26 @@ function calcHolidayHours(startMs, endMs, holidaysMap) {
   return totalMs / 3600000;
 }
 
+function splitIntervalByMonth(startMs, endMs) {
+  if (!startMs || !endMs || endMs <= startMs) return [];
+  const parts = [];
+  let curStart = startMs;
+  while (curStart < endMs) {
+    const d = new Date(curStart);
+    const nextMonthBoundary = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0).getTime();
+    const segEnd = Math.min(endMs, nextMonthBoundary);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    parts.push({
+      ym,
+      startMs: curStart,
+      endMs: segEnd,
+      workH: (segEnd - curStart) / 3600000
+    });
+    curStart = segEnd;
+  }
+  return parts;
+}
+
 function makeDefaultMonthData(ymStr) {
   const [yS, mS] = ymStr.split("-");
   const y = parseInt(yS, 10) || 2026;
@@ -1114,8 +1134,16 @@ function handleAfterPart1() {
     return;
   }
   const hours = (bounds.endMs - bounds.startMs) / 3600000;
-  document.getElementById("shiftPreviewText").textContent =
-    `${shiftType}: ${fmtDt(bounds.startMs)} → ${fmtDt(bounds.endMs)} (${hours.toFixed(2)} ч)`;
+  const segs = splitIntervalByMonth(bounds.startMs, bounds.endMs);
+  if (segs.length > 1) {
+    document.getElementById("shiftPreviewText").textContent =
+      `${shiftType} (${hours.toFixed(2)} ч) будет разделена по 00:00: ` +
+      `${segs[0].ym}: ${segs[0].workH.toFixed(2)} ч (${fmtDt(segs[0].startMs)} → ${fmtDt(segs[0].endMs)}) и ` +
+      `${segs[1].ym}: ${segs[1].workH.toFixed(2)} ч (${fmtDt(segs[1].startMs)} → ${fmtDt(segs[1].endMs)}).`;
+  } else {
+    document.getElementById("shiftPreviewText").textContent =
+      `${shiftType}: ${fmtDt(bounds.startMs)} → ${fmtDt(bounds.endMs)} (${hours.toFixed(2)} ч)`;
+  }
   goStep(3);
 }
 
@@ -1133,15 +1161,24 @@ function saveShiftFromWizard() {
     return;
   }
   const { startMs, endMs } = bounds;
-  const workH = (endMs - startMs) / 3600000;
+  const segments = splitIntervalByMonth(startMs, endMs);
+  const splitNoteSuffix = segments.length > 1
+    ? (note ? `${note} (переход 00:00 на след. мес.)` : "переход 00:00 на след. мес.")
+    : note;
 
-  mData.shifts.push({
-    id: Date.now() + Math.random(),
-    route,
-    startMs,
-    endMs,
-    workH,
-    note
+  segments.forEach((seg, idx) => {
+    if (!state.months[seg.ym]) {
+      state.months[seg.ym] = makeDefaultMonthData(seg.ym);
+    }
+    state.months[seg.ym].hidden = false;
+    state.months[seg.ym].shifts.push({
+      id: Date.now() + Math.random() + idx,
+      route,
+      startMs: seg.startMs,
+      endMs: seg.endMs,
+      workH: seg.workH,
+      note: splitNoteSuffix
+    });
   });
 
   document.getElementById("wizShiftDate").value = "";
